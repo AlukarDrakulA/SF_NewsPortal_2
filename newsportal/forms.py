@@ -1,7 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 
-from .models import Post
+from .models import User, Post
 
 
 class PostForm(forms.ModelForm):
@@ -29,3 +29,29 @@ class PostForm(forms.ModelForm):
             )
 
         return cleaned_data
+
+
+class ProfileForm(forms.ModelForm):
+    class Meta:
+        model = User
+        # fields = '__all__'
+
+        fields = [
+            'username',
+            'password',
+            'email',
+            'first_name',
+            'last_name',
+        ]
+
+    # def clean(self):
+    #     cleaned_data = super().clean()
+    #     new_password = cleaned_data.post("new_password")
+    #     confirm_password = cleaned_data.post("confirm_password")
+
+    #     if new_password != confirm_password:
+    #         raise ValidationError(
+    #             "Пароли не совпадают!"
+    #         )
+
+    #     return cleaned_data
