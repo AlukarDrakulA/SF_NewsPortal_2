@@ -19,7 +19,8 @@ News
         <input type="submit" value="Найти" />
     </form>
     <hr>
-
+    <button type="'submit"><a href="{% url 'news_create' %}">Добавить новость</a></button>
+    <hr>
     {% if news %}
     <h2>Список статей и новостей</h2>
     <table>
@@ -35,7 +36,6 @@ News
         <td>{{ post.dateCreation|date:'d F Y' }}</td>
         <td>{{ post.post|truncatechars:20|censor }}</td>
     </tr>
-
     {% endfor %}
     </table>
 
