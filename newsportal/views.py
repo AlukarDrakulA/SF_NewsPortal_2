@@ -1,11 +1,12 @@
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from .forms import PostForm, ProfileForm
-from .models import User, Post
+from .models import User, Post, Category, UserSubscribers
 from .filters import PostFilter
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
-
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect
 
 # Create your views here.
 class NewsList(LoginRequiredMixin, ListView):
@@ -68,3 +69,63 @@ class ProfileEdit(LoginRequiredMixin, UpdateView):
     # def form_valid(self, form):
     #     form.send_password()
     #     return super().form_valid()
+
+
+class CategoryList(ListView):
+    model = Category
+    ordering = 'name'
+    template_name = 'category.html'
+    context_object_name = 'category'
+    paginate_by = 10
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        all_categories = Category.objects.all()
+        user_subscribe_category = UserSubscribers.objects.filter(user_id = User.objects.get(id=self.request.user.id))
+        
+        cat_id_list = []
+        cat_name_list = []
+
+        for i in all_categories:
+            cat_id_list.append(i.id)
+            cat_name_list.append(i.name)
+        cat_id_dict = dict(zip(cat_name_list, cat_id_list))
+        
+        context['cat_id'] = cat_id_dict
+
+        cat_list = []
+        for cat in all_categories:
+            cat_list.append(cat.name)
+        cat_user_dict = {i: False for i in cat_list}
+        
+        user_list = []
+        for u in user_subscribe_category:
+            user_list.append(str(u.category))
+
+        for x in cat_user_dict:
+            if x in user_list:
+                cat_user_dict[x] = True
+        
+        context['subscribes'] = cat_user_dict
+
+        return context
+
+
+@login_required
+def add_subscribe(request, cat):
+    user = request.user
+    category = Category.objects.get(name=cat)
+    subscribe = UserSubscribers(user_id=user.id, category_id=category.id)
+    subscribe.save()
+    return redirect('/category/')
+
+
+@login_required
+def del_subscribe(request, cat):
+    user = request.user
+    category = Category.objects.get(name=cat)
+    unsubscribe = UserSubscribers.objects.filter(user_id=user.id, category_id=category.id)
+    unsubscribe.delete()
+    return redirect('/category/')
+
