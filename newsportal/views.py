@@ -7,6 +7,11 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
+from .tasks import notify_new_post_category
+# from django.http import HttpResponse
+# from datetime import datetime, timedelta
+
+from django.core.cache import cache # импортируем наш кэш
 
 # Create your views here.
 class NewsList(LoginRequiredMixin, ListView):
@@ -26,11 +31,31 @@ class NewsList(LoginRequiredMixin, ListView):
         context['filterset'] = self.filterset
         return context
 
+    # * выполнение задачи для проверки работоспособности
+    # def get(self, request):
+    #     printer.delay(10)
+    #     printer.apply_async([10], countdown = 5) # выполнение задачи через 5 секунд после ее создания
+    #     printer.apply_async([10], 
+    #                         eta = datetime.now() + timedelta(seconds=5)) # eta принимает datetime объект
+    #     hello.delay()
+    #     return HttpResponse('Hello!')
+
 
 class NewDetail(DetailView):
     model = Post
     template_name = 'new.html'
     context_object_name = 'new'
+    queryset = Post.objects.all()
+
+    def get_object(self, *args, **kwargs): # переопределяем метод получения объекта, как ни странно
+        obj = cache.get(f'product-{self.kwargs["pk"]}', None) # кэш очень похож на словарь, и метод get действует так же. Он забирает значение по ключу, если его нет, то забирает None.
+
+        # если объекта нет в кэше, то получаем его и записываем в кэш
+        if not obj:
+            obj = super().get_object(queryset=self.queryset)
+            cache.set(f'product-{self.kwargs["pk"]}', obj)
+        
+        return obj
 
 
 class NewsCreate(PermissionRequiredMixin, CreateView):
@@ -38,6 +63,13 @@ class NewsCreate(PermissionRequiredMixin, CreateView):
     form_class = PostForm
     model = Post
     template_name = 'news_edit.html'
+
+    def form_valid(self, form):
+        post = form.save()
+        post_id = post.id
+        notify_new_post_category.delay(post_id)
+        return redirect('/')
+
 
 
 class NewsUpdate(PermissionRequiredMixin, UpdateView):

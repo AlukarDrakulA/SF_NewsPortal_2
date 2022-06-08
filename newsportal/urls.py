@@ -3,8 +3,10 @@ from django.urls import path, include
 from .views import NewDetail, NewsCreate, NewsList, NewsUpdate, NewsDelete, ProfileEdit, CategoryList, del_subscribe
 from .views import add_subscribe, del_subscribe
 
+from django.views.decorators.cache import cache_page
+
 urlpatterns = [
-   path('', NewsList.as_view(),  name='news_list'),
+   path('', cache_page(60)(NewsList.as_view()),  name='news_list'),
    path('<int:pk>', NewDetail.as_view(), name='news_detail'),
    path('create/', NewsCreate.as_view(), name='news_create'),
    path('<int:pk>/update/', NewsUpdate.as_view(), name='news_update'),
